@@ -1,0 +1,44 @@
+apiVersion: run.tanzu.vmware.com/v1alpha3
+kind: TanzuKubernetesCluster
+metadata:
+  name: prod-cluster-ubuntu
+  namespace: prod
+  annotations:
+    run.tanzu.vmware.com/resolve-os-image: os-name=ubuntu
+spec:
+   topology:
+     controlPlane:
+       replicas: 1
+       storageClass: k8s-default-storage-policy
+       vmClass: guaranteed-small
+       tkr:
+         reference:
+           name: v1.27.10---vmware.1-fips.1-tkg.1
+     nodePools:
+     - name: nodepool-a100-primary
+       replicas: 3
+       storageClass: k8s-default-storage-policy
+       vmClass: guaranteed-small
+       tkr:
+         reference:
+           name: v1.27.10---vmware.1-fips.1-tkg.1
+       volumes:
+       - name: containerd
+         mountPath: /var/lib/containerd
+         capacity:
+           storage: 170Gi
+       - name: kubelet
+         mountPath: /var/lib/kubelet
+         capacity:
+           storage: 70Gi
+   settings:
+     storage:
+       defaultClass: k8s-default-storage-policy
+     network:
+       cni:
+        name: antrea
+       services:
+        cidrBlocks: ["198.51.100.0/12"]
+       pods:
+        cidrBlocks: ["192.0.2.0/16"]
+       serviceDomain: cluster.local

@@ -1,0 +1,90 @@
+Step1: Prepare NSX ALB
+=======================
+    1. Install and prepare the cluster.
+	2. Change the licensing tier to Essential.
+		show configuration audit tier ESSENTIALS
+		configure sslkeyadncertificate <name>
+		no ocsp_config
+	3. Install License.
+	4. Change the NSX ALB certificate to inlcude IP in the SAN.
+    5. Add/modify the Default-Cloud. 
+	6. Create network pools and static route (make sure only the VIP has selected for VIP and SE). 
+    7. Create a IPAM profile for Default-Cloud and associate. 
+    8. Change the Service Engine Resources in the Service Engine Group. 
+    9. Change the Storage to shared in the Service Engine Group.
+	10. Make sure basic authentication is enabled for UI access.
+Step 2: Prepare vCenter for Workload Management.
+================================================
+    1. Create a Tang Catregory and Tag for vSAN.
+	2. Create a Storage Policy (Tag Based).
+    3. Make Sure the required Resources are available. 
+    4. Make sure the vDS port-groups are prepared. 
+    5. Make sure the DRS and vSphere HA is configured in the cluster.
+    6. Enable workload management.	
+Step 3: Prepare an Ubuntu VM for Bastion Host: 
+===============================================
+    1. Install Wget, Curl, OpenSSL, Helm etc.
+	2. Installinh helm on Ubuntu 
+	-----------------------------
+	curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+    sudo apt-get install apt-transport-https --yes
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+    sudo apt-get update
+    sudo apt-get install helm
+    3. Install the kubectl and kubectl-vsphere on Ubuntu. 
+     Donwload the kubectl from API server. 
+	 mv kubectl* /usr/local/bin/
+    4. Trust the CA Certificate of the Kube API
+	  apt install -y ca-certificates
+	  wget https://<vCenterIP>/certs/download.zip --no-check-certificate
+	  unzip download.zip
+	  cd ./certs/lin/
+	  mv <certname>.0 certname.crt
+	  cp <Certname>.crt /usr/local/share/ca-certificates/
+	  openssl s_client -connect <vcenterFQDN>:443 2>/dev/null | openssl x509 -noout -dates
+	  openssl x509 -in <certname>.crt -text -noout
+	 5. Check the Tanzu Login using kubectl
+	  kubectl vsphere login --server=<KubeAPI-VIP>  --vsphere-username administrator@vsphere.local
+	  
+Step 4: Create a TKGS Cluster on Supervisor using kubectl
+=========================================================
+    1. Create a VM Class.
+	2. Craete a Name Space 
+    3. kubectl vsphere login --server=SUPERVISOR-CONTROL-PLANE-IP-ADDRESS-or-FQDN --vsphere-username USERNAME
+	4. kubectl config get-contexts
+	5. kubectl config use-context <ns>
+	6. kubectl describe namespace VSPHERE-NAMESPACE-NAME 
+	7. kubectl get tkr
+	8. Create YAML File 
+	9. Validate YAML file (https://yamlchecker.com/)
+	Makesure to provision the cluster with default storage class defined. 
+	10. Change  the POD Admission Policy
+	 kubectl label --overwrite ns --all pod-security.kubernetes.io/enforce=privileged
+	11. Install the NFS CSI if required. 
+	curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/v4.5.0/deploy/install-driver.sh | bash -s v4.5.0 --
+	kubectl get pods -A
+    kubectl -n kube-system get pod -o wide -l app=csi-nfs-controller
+    kubectl -n kube-system get pod -o wide -l app=csi-nfs-node
+	12. Create a storage class (use the YAML file template provided)
+	12. Change the default storage policy if required. 
+	kubectl patch storageclass <Storage Class Name>  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+Step 5: Deploy the NGINX Ingress on all the TKCs.
+=========================================================
+	helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+
+	kubectl create namespace ingress-nginx
+
+	kubectl label --overwrite ns ingress-nginx pod-security.kubernetes.io/enforce=privileged
+
+	helm install my-ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
+
+	kubectl --namespace ingress-nginx get services		
+
+	
+
+	
+	
+	  
+	  
+	
+	
