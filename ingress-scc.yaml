@@ -1,0 +1,100 @@
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: true
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+apiVersion: security.openshift.io/v1
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups:
+- system:cluster-admins
+kind: SecurityContextConstraints
+metadata:
+  name: ingress-scc
+priority: 10
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+seccompProfiles:
+- runtime/default
+users: []
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+
+
+
+
+
+$ wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.5/deploy/static/provider/cloud/deploy.yaml
+
+
+
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: <version of the deploy.yaml>
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+  
+  
+  spec:
+  minReadySeconds: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/instance: ingress-nginx
+      app.kubernetes.io/name: ingress-nginx
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+    
+    
+    
+    securityContext:
+          allowPrivilegeEscalation: true
+   
+   
+   
+   oc create ns ingress-nginx
+   
+   
+   oc adm policy add-scc-to-user ingress-scc -z default -n ingress-nginx
+oc adm policy add-scc-to-user ingress-scc -z ingress-nginx-admission -n ingress-nginx
+oc adm policy add-scc-to-user ingress-scc -z ingress-nginx -n ingress-nginx
+
+
+
+
+
+ oc -n ingress-testing get deployment.apps/blog-app -o yaml | oc adm policy scc-subject-review -f -
+  382  oc  get deployment.apps/blog-app -o yaml -n ingress-testing  | oc adm policy scc-subject-review -f -
+  383  oc prject ingress-testing
+  384  oc project ingress-testing
+  385  oc  get deployment.apps/blog-app -o yaml -n ingress-testing  | oc adm policy scc-subject-review -f -
+  386  oc create sa ingress-test
+  387  oc adm policy add-scc-to-user anyuid -z ingress-test
+  388  oc set serviceaccount deployment/blog-app ingress-test
+  389  oc get pods
